@@ -1,12 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-
-// TODO: offload interface
-interface Language {
-  code: string;
-  name: string;
-  icon: string;
-}
+import { Language } from '../interfaces/lang.interface';
 
 @Component({
   selector: 'app-lang-switcher',

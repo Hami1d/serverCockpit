@@ -1,0 +1,18 @@
+Frontend:
+    - lang switcher flags and dropdown
+    - Dashboard
+    - in frontend dir
+
+
+Backend:
+    - discovery
+
+
+general:
+    - Dockerfile
+    - addons?
+    - login? ssh?
+    - english
+    - translate.getBrowserLang?
+    - lightmode:Darkmode
+    - chartjs

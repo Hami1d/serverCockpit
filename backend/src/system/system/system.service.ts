@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import si from 'systeminformation';
+import {
+  CpuMetrics,
+  DiskMetrics,
+  MemoryMetrics,
+  SystemMetrics,
+  UptimeMetrics,
+} from '../../../shared/models';
 
 @Injectable()
 export class SystemService {
@@ -7,7 +14,7 @@ export class SystemService {
     return Math.round((bytes / 1024 / 1024 / 1024) * 10) / 10;
   }
 
-  async getCpuMetrics() {
+  async getCpuMetrics(): Promise<CpuMetrics> {
     const [load, info] = await Promise.all([si.currentLoad(), si.cpu()]);
 
     return {
@@ -18,7 +25,7 @@ export class SystemService {
     };
   }
 
-  async getMemoryMetrics() {
+  async getMemoryMetrics(): Promise<MemoryMetrics> {
     const memory = await si.mem();
 
     return {
@@ -28,7 +35,7 @@ export class SystemService {
     };
   }
 
-  async getDiskMetrics() {
+  async getDiskMetrics(): Promise<DiskMetrics> {
     const disks = await si.fsSize();
     const primaryDisk = disks.find((disk) => disk.mount === '/') ?? disks[0];
 
@@ -40,7 +47,7 @@ export class SystemService {
     };
   }
 
-  async getUptimeMetrics() {
+  async getUptimeMetrics(): Promise<UptimeMetrics> {
     const time = si.time();
 
     return {
@@ -50,7 +57,7 @@ export class SystemService {
     };
   }
 
-  async getAllMetrics() {
+  async getAllMetrics(): Promise<SystemMetrics> {
     const [cpu, memory, disk, uptime] = await Promise.all([
       this.getCpuMetrics(),
       this.getMemoryMetrics(),
