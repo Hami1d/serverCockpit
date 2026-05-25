@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Injectable } from '@nestjs/common';
 import si from 'systeminformation';
 
@@ -41,7 +40,6 @@ export class SystemService {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async getUptimeMetrics() {
     const time = si.time();
 
