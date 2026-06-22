@@ -4,6 +4,31 @@
   },
   "SIDEBAR": {
     "HOME": "Home",
-    "LANG": "de"
+    "LANG": "de",
+    "DASHBOARD": "Dashboard",
+    "APPS": "Apps",
+    "DISCOVERY": "Discovery"
+  },
+  "APPS": {
+    "TITLE": "Apps",
+    "REFRESH": "Aktualisieren",
+    "APP_LOADING": "Lade Apps…",
+    "EMPTY": "Keine Apps gefunden"
+  },
+  "DASHBOARD": {
+    "RAM": "RAM",
+    "CPU": "CPU",
+    "CORES": "Cores",
+    "GHZ": "Ghz",
+    "GB": "GB",
+    "TOTAL": "Gesamt",
+    "LOAD_METRICS": "Lade Metriken..."
+  },
+  "DISCOVERY": {
+    "NOT_SCANNED": "Noch kein Scan durchgeführt",
+    "LAST_SCAN": "Letzter Scan",
+    "FOUND": "gefunden",
+    "NEW": "Neu",
+    "RUNNING": "Läuft"
   }
 }

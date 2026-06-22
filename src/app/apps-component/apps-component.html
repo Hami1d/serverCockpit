@@ -1,0 +1,28 @@
+<div class="apps-page">
+  <div class="page-header">
+    <h1>{{ 'APPS.TITLE' | translate }}</h1>
+    <button (click)="loadApps()" [disabled]="loading()">{{ 'APPS.REFRESH' | translate }}</button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading">{{ 'APPS.LOADING' | translate }}</div>
+  }
+
+  @if (!loading() && apps().length === 0) {
+    <div class="empty">{{ 'APPS.EMPTY' | translate }}</div>
+  }
+
+  <div class="apps-grid">
+    @for (app of apps(); track app.id) {
+      <div class="app-card" (click)="openApp(app)">
+        <span class="app-icon">{{ app.icon }}</span>
+        <span class="app-name">{{ app.name }}</span>
+        <span class="app-category">{{ app.category }}</span>
+        <span class="app-status" [style.color]="getStatusColor(app.status)">
+          - {{ app.status }}
+        </span>
+        <span class="app-port">:{{ app.port }}</span>
+      </div>
+    }
+  </div>
+</div>

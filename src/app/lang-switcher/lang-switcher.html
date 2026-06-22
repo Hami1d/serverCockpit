@@ -1,10 +1,7 @@
-<p>lang-switcher works! {{ 'SIDEBAR.LANG' | translate }}</p>
-
-<!-- TODO: flag Dropdown -->
-<div class="lang-dropdown">
+<select class="lang-dropdown">
   @for (lang of languages; track lang.code) {
-    <button (click)="switchLang(lang.code)">
-      <img src="{{ lang.icon }}" alt="{{ lang.name }}" />
-    </button>
+    <option (click)="switchLang(lang.code)" [selected]="lang.code === currentLang">
+      {{ lang.name }}
+    </option>
   }
-</div>
+</select>

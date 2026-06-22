@@ -1,0 +1,12 @@
+select {
+  text-align: left;
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent-dim);
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}

@@ -1,0 +1,46 @@
+<div class="discovery-page">
+  <div class="page-header">
+    <div>
+      <h1>Discovery</h1>
+      @if (lastScanAt()) {
+        <span class="subtitle"
+          >{{ 'DISCOVERY.LAST_SCAN' | translate }}: {{ lastScanAt() }} ·
+          {{ lastDurationMs() }}ms</span
+        >
+      } @else {
+        <span class="subtitle">{{ 'DISCOVERY.NOT_SCANNED' | translate }}</span>
+      }
+    </div>
+    <button (click)="runScan()" [disabled]="scanning()">
+      {{ scanning() ? 'Scanne…' : 'Rescan' }}
+    </button>
+  </div>
+
+  <div class="stats">
+    <div class="chip">{{ apps().length }} {{ 'DISCOVERY.FOUND' | translate }}</div>
+    <div class="chip green">{{ newAppsCount() }} {{ 'DISCOVERY.NEW' | translate }}</div>
+    <div class="chip blue">{{ runningCount() }} {{ 'DISCOVERY.RUNNING' | translate }}</div>
+  </div>
+
+  @if (apps().length === 0 && !scanning()) {
+    <div class="empty">{{ 'DISCOVERY.NOT_SCANNED' | translate }}</div>
+  }
+
+  <div class="list">
+    @for (app of apps(); track app.id) {
+      <div class="item" [class.is-new]="isNew(app.id)" (click)="openApp(app)">
+        <span class="icon">{{ app.icon }}</span>
+        <div class="info">
+          <span class="name">{{ app.name }}</span>
+          <span class="meta">port {{ app.port }} · {{ app.source }}</span>
+        </div>
+        <div class="badges">
+          <span class="badge badge-{{ app.status }}">{{ app.status }}</span>
+          @if (isNew(app.id)) {
+            <span class="badge badge-new">neu</span>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

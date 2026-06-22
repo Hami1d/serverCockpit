@@ -1,1 +1,12 @@
-<app-sidebar />
+<div class="app-shell">
+  <app-sidebar />
+  <main class="main-content">
+    <div class="topbar">
+      <span class="conn-indicator" [class.live]="isConnected()">
+        <span class="dot"></span>
+        {{ isConnected() ? 'live' : 'offline' }}
+      </span>
+    </div>
+    <router-outlet />
+  </main>
+</div>

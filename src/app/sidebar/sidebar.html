@@ -1,2 +1,27 @@
-<p>sidebar works!</p>
-<app-lang-switcher />
+<div class="sidebar">
+  <ul class="nav-list">
+    @for (item of navtree; track item.label) {
+      <li
+        routerLink="{{ item.route }}"
+        class="nav-item"
+        routerLinkActive="active"
+        [title]="item.label | translate"
+      >
+        {{ item.icon }}
+        {{ item.label | translate }}
+      </li>
+    }
+  </ul>
+  <div class="switcher">
+    <div class="mode-switcher" (click)="changeMode()">
+      @if (darkMode() === 'light') {
+        <!-- TODO: replace with icons -->
+        <button>Dark</button>
+      } @else {
+        <button>light</button>
+      }
+    </div>
+
+    <app-lang-switcher />
+  </div>
+</div>

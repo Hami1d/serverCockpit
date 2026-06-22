@@ -1,0 +1,50 @@
+<!-- TODO: generic-component -->
+
+<div class="dashboard">
+  @if (metrics()) {
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="label">{{ 'DASHBOARD.CPU' | translate }}</span>
+        <span class="value">{{ metrics()!.cpu.usagePercent }}%</span>
+        <div class="bar">
+          <div class="bar-fill" [style.width.%]="metrics()!.cpu.usagePercent"></div>
+        </div>
+        <span class="sub"
+          >{{ metrics()!.cpu.cores }} {{ 'DASHBOARD.CORES' | translate }} ·
+          {{ metrics()!.cpu.speedGhz }} {{ 'DASHBOARD.GHZ' | translate }}</span
+        >
+      </div>
+
+      <div class="metric-card">
+        <span class="label">{{ 'DASHBOARD.RAM' | translate }}</span>
+        <span class="value">{{ metrics()!.memory.usedGb }} {{ 'DASHBOARD.GB' | translate }}</span>
+        <div class="bar">
+          <div class="bar-fill amber" [style.width.%]="metrics()!.memory.usagePercent"></div>
+        </div>
+        <span class="sub">/ {{ metrics()!.memory.totalGb }} {{ 'DASHBOARD.GB' | translate }}</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="label">Disk</span>
+        <span class="value">{{ metrics()!.disk.usedGb }} {{ 'DASHBOARD.GB' | translate }}</span>
+        <div class="bar">
+          <div class="bar-fill green" [style.width.%]="metrics()!.disk.usagePercent"></div>
+        </div>
+        <span class="sub"
+          >von {{ metrics()!.disk.totalGb }} {{ 'DASHBOARD.GB' | translate }} ·
+          {{ metrics()!.disk.mount }}</span
+        >
+      </div>
+
+      <div class="metric-card">
+        <span class="label">Uptime</span>
+        <span class="value">{{ metrics()!.uptime.days }}d {{ metrics()!.uptime.hours }}h</span>
+        <span class="sub"
+          >{{ metrics()!.uptime.seconds }}s {{ 'DASHBOARD.TOTAL' | translate }}</span
+        >
+      </div>
+    </div>
+  } @else {
+    <div class="loading">{{ 'DASHBOARD.LOAD_METRICS' | translate }}</div>
+  }
+</div>

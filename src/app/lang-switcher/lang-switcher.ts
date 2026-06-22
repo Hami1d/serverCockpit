@@ -4,7 +4,7 @@ import { Language } from '../interfaces/lang.interface';
 
 @Component({
   selector: 'app-lang-switcher',
-  imports: [TranslatePipe],
+  imports: [],
   templateUrl: './lang-switcher.html',
   styleUrl: './lang-switcher.css',
 })

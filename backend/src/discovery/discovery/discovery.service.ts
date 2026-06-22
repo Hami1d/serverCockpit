@@ -1,128 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { exec } from 'child_process';
+import { promisify } from 'util';
+import Docker from 'dockerode';
 import {
   AppCategory,
   AppSource,
   AppStatus,
   DiscoveredApp,
   ScanResult,
-} from 'shared/models';
-import { promisify } from 'util';
-import Docker from 'dockerode';
+} from '../../../shared/models';
 
 const execAsync = promisify(exec);
-// TODO: offload
-interface AppFingerprint {
-  name: string;
-  port: number;
-  icon: string;
-  category: AppCategory;
-  urlPath: string;
-}
-
-const APP_FINGERPRINTS: AppFingerprint[] = [
-  {
-    name: 'Portainer',
-    port: 9443,
-    icon: '🐳',
-    category: 'container',
-    urlPath: '/',
-  },
-  {
-    name: 'WireGuard UI',
-    port: 51821,
-    icon: '🔒',
-    category: 'vpn',
-    urlPath: '/',
-  },
-  {
-    name: 'Nextcloud',
-    port: 8080,
-    icon: '☁',
-    category: 'storage',
-    urlPath: '/',
-  },
-  {
-    name: 'Grafana',
-    port: 3001,
-    icon: '📊',
-    category: 'monitoring',
-    urlPath: '/',
-  },
-  {
-    name: 'Jellyfin',
-    port: 8096,
-    icon: '🎬',
-    category: 'media',
-    urlPath: '/web/',
-  },
-  {
-    name: 'Nginx Proxy Manager',
-    port: 81,
-    icon: '🌐',
-    category: 'proxy',
-    urlPath: '/',
-  },
-  {
-    name: 'Home Assistant',
-    port: 8123,
-    icon: '🏠',
-    category: 'automation',
-    urlPath: '/',
-  },
-  {
-    name: 'Vaultwarden',
-    port: 8222,
-    icon: '🔑',
-    category: 'security',
-    urlPath: '/',
-  },
-  {
-    name: 'Pi-hole',
-    port: 8053,
-    icon: '🕳',
-    category: 'dns',
-    urlPath: '/admin/',
-  },
-  { name: 'Syncthing', port: 8384, icon: '🔄', category: 'sync', urlPath: '/' },
-  {
-    name: 'Uptime Kuma',
-    port: 3002,
-    icon: '📡',
-    category: 'monitoring',
-    urlPath: '/',
-  },
-  {
-    name: 'Prometheus',
-    port: 9090,
-    icon: '🔥',
-    category: 'monitoring',
-    urlPath: '/',
-  },
-  { name: 'Gitea', port: 3003, icon: '🐱', category: 'git', urlPath: '/' },
-  {
-    name: 'Mealie',
-    port: 9000,
-    icon: '🍽',
-    category: 'lifestyle',
-    urlPath: '/',
-  },
-  {
-    name: 'Netdata',
-    port: 19999,
-    icon: '📈',
-    category: 'monitoring',
-    urlPath: '/',
-  },
-  { name: 'Plex', port: 32400, icon: '▶', category: 'media', urlPath: '/web/' },
-  {
-    name: 'AdGuard Home',
-    port: 3000,
-    icon: '🛡',
-    category: 'dns',
-    urlPath: '/',
-  },
-];
 
 @Injectable()
 export class DiscoveryService {
@@ -163,35 +51,69 @@ export class DiscoveryService {
   private async discoverByPortScan(): Promise<DiscoveredApp[]> {
     try {
       const { stdout } = await execAsync(
-        'ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null',
+        'ss -tlnp 2>/dev/null || lsof -i -P -n 2>/dev/null',
       );
-      const openPorts = this.parseOpenPorts(stdout);
-      return this.matchPortsToFingerprints(openPorts);
+      return this.parsePortsWithProcessNames(stdout);
     } catch {
       this.logger.warn('Port scan failed');
       return [];
     }
   }
 
-  private parseOpenPorts(ssOutput: string): number[] {
-    const portPattern = /[:\s](\d{2,5})\s/g;
-    const ports = new Set<number>();
+  private parsePortsWithProcessNames(output: string): DiscoveredApp[] {
+    const apps = new Map<number, DiscoveredApp>();
+
+    // lsof format: processName pid user ... TCP *:PORT (LISTEN)
+    const lsofPattern = /^(\S+)\s+\d+\s+\S+.*:(\d{4,5})\s+\(LISTEN\)/gm;
+
+    // ss format: LISTEN ... *:PORT ... users:(("processName",...))
+    const ssPattern = /LISTEN.*[:\s](\d{4,5})\s.*users:\(\("([^"]+)"/gm;
+
     let match: RegExpExecArray | null;
 
-    while ((match = portPattern.exec(ssOutput)) !== null) {
-      const port = parseInt(match[1], 10);
-      if (port >= 80 && port <= 65535) {
-        ports.add(port);
+    while ((match = lsofPattern.exec(output)) !== null) {
+      const processName = this.decodeProcessName(match[1]);
+      const port = parseInt(match[2], 10);
+
+      if (port >= 1024 && port <= 49999 && !apps.has(port)) {
+        apps.set(port, this.buildPortApp(port, processName));
       }
     }
 
-    return [...ports];
+    while ((match = ssPattern.exec(output)) !== null) {
+      const port = parseInt(match[1], 10);
+      const processName = match[2];
+
+      if (port >= 1024 && port <= 49999 && !apps.has(port)) {
+        apps.set(port, this.buildPortApp(port, processName));
+      }
+    }
+
+    return [...apps.values()];
   }
 
-  private matchPortsToFingerprints(openPorts: number[]): DiscoveredApp[] {
-    return APP_FINGERPRINTS.filter((fp) => openPorts.includes(fp.port)).map(
-      (fp) => this.buildApp(fp, 'port-scan', 'running'),
-    );
+  private decodeProcessName(raw: string): string {
+    return raw
+      .replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) =>
+        String.fromCharCode(parseInt(hex, 16)),
+      )
+      .trim();
+  }
+
+  private buildPortApp(
+    port: number,
+    processName: string = 'unknown',
+  ): DiscoveredApp {
+    return {
+      id: `port-${port}`,
+      name: processName,
+      icon: '🔌',
+      category: 'unknown' as AppCategory,
+      port,
+      url: `http://localhost:${port}`,
+      status: 'running' as AppStatus,
+      source: 'port-scan' as AppSource,
+    };
   }
 
   private async discoverDockerContainers(): Promise<DiscoveredApp[]> {
@@ -215,17 +137,11 @@ export class DiscoveryService {
     const status: AppStatus =
       container.State === 'running' ? 'running' : 'stopped';
 
-    const matchedFingerprint = APP_FINGERPRINTS.find((fp) =>
-      containerName
-        .toLowerCase()
-        .includes(fp.name.toLowerCase().replace(/\s+/g, '')),
-    );
-
     return {
       id: `docker-${container.Id.slice(0, 8)}`,
-      name: matchedFingerprint?.name ?? containerName,
-      icon: matchedFingerprint?.icon ?? '📦',
-      category: matchedFingerprint?.category ?? 'unknown',
+      name: containerName,
+      icon: '🐳',
+      category: 'docker' as AppCategory,
       port: publicPort,
       url: publicPort ? `http://localhost:${publicPort}` : null,
       status,
@@ -240,7 +156,6 @@ export class DiscoveryService {
       );
       return this.parseSystemdServices(stdout);
     } catch {
-      this.logger.warn('systemd discovery failed');
       return [];
     }
   }
@@ -249,54 +164,34 @@ export class DiscoveryService {
     return output
       .split('\n')
       .filter((line) => line.includes('.service'))
-      .flatMap((line) => {
+      .map((line) => {
         const serviceName =
           line.trim().split(/\s+/)[0]?.replace('.service', '') ?? '';
-        const matched = APP_FINGERPRINTS.find((fp) =>
-          serviceName
-            .toLowerCase()
-            .includes(fp.name.toLowerCase().split(' ')[0]),
-        );
-
-        if (!matched) {
-          return [];
-        }
-
-        return [this.buildApp(matched, 'systemd', 'running')];
-      });
-  }
-
-  private buildApp(
-    fp: AppFingerprint,
-    source: AppSource,
-    status: AppStatus,
-  ): DiscoveredApp {
-    return {
-      id: `${source}-${fp.name.toLowerCase().replace(/\s+/g, '-')}`,
-      name: fp.name,
-      icon: fp.icon,
-      category: fp.category,
-      port: fp.port,
-      url: `http://localhost:${fp.port}${fp.urlPath}`,
-      status,
-      source,
-    };
+        return {
+          id: `systemd-${serviceName}`,
+          name: serviceName,
+          icon: '⚙',
+          category: 'unknown' as AppCategory,
+          port: null,
+          url: null,
+          status: 'running' as AppStatus,
+          source: 'systemd' as AppSource,
+        };
+      })
+      .filter((app) => app.name !== '');
   }
 
   private mergeApps(...appLists: DiscoveredApp[][]): DiscoveredApp[] {
-    const appsByName = new Map<string, DiscoveredApp>();
+    const appsById = new Map<string, DiscoveredApp>();
 
     for (const list of appLists) {
       for (const app of list) {
-        const existing = appsByName.get(app.name);
-        if (!existing) {
-          appsByName.set(app.name, app);
-        } else {
-          appsByName.set(app.name, { ...existing, ...app });
+        if (!appsById.has(app.id)) {
+          appsById.set(app.id, app);
         }
       }
     }
 
-    return [...appsByName.values()];
+    return [...appsById.values()];
   }
 }

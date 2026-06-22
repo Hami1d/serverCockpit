@@ -1,7 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Sidebar } from './sidebar/sidebar';
+import { Socket } from './services/socket';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-root',
@@ -10,5 +12,15 @@ import { Sidebar } from './sidebar/sidebar';
   styleUrl: './app.css',
 })
 export class App {
-  protected readonly title = signal('serverCockpit');
+  private readonly socket = inject(Socket);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly isConnected = signal(false);
+
+  ngOnInit(): void {
+    this.socket.connect();
+    this.socket.isConnected
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((status) => this.isConnected.set(status));
+  }
 }

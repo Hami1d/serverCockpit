@@ -4,6 +4,9 @@
   },
   "SIDEBAR": {
     "HOME": "Home",
-    "LANG": "en"
+    "LANG": "en",
+    "DASHBOARD": "Dashboard",
+    "APPS": "Apps",
+    "DISCOVERY": "Discovery"
   }
 }
