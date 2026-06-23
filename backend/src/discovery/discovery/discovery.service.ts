@@ -132,8 +132,11 @@ export class DiscoveryService {
 
   private mapContainerToApp(container: Docker.ContainerInfo): DiscoveredApp {
     const containerName = container.Names[0]?.replace('/', '') ?? 'unknown';
-    const publicPort =
-      container.Ports.find((p) => p.PublicPort)?.PublicPort ?? null;
+
+    const tcpPort =
+      container.Ports.find((p) => p.PublicPort && p.Type === 'tcp')
+        ?.PublicPort ?? null;
+
     const status: AppStatus =
       container.State === 'running' ? 'running' : 'stopped';
 
@@ -142,8 +145,8 @@ export class DiscoveryService {
       name: containerName,
       icon: '🐳',
       category: 'docker' as AppCategory,
-      port: publicPort,
-      url: publicPort ? `http://localhost:${publicPort}` : null,
+      port: tcpPort,
+      url: tcpPort ? `http://localhost:${tcpPort}` : null,
       status,
       source: 'docker',
     };
@@ -161,24 +164,80 @@ export class DiscoveryService {
   }
 
   private parseSystemdServices(output: string): DiscoveredApp[] {
+    const ignoredPrefixes = [
+      'systemd-',
+      'dbus',
+      'getty',
+      'plymouth',
+      'kmod',
+      'setvtrgb',
+      'blk-',
+      'lvm2',
+      'alsa',
+      'keyboard',
+      'console',
+      'binfmt',
+      'apparmor',
+      'snapd',
+      'user@',
+      'user-runtime',
+      'rtkit',
+      'accounts',
+      'colord',
+      'pulseaudio',
+      'avahi',
+      'iio',
+      'switcheroo',
+      'upower',
+      'udisks',
+      'packagekit',
+      'fwupd',
+      'polkit',
+      'rsyslog',
+      'bluetooth',
+      'cups',
+      'gdm',
+      'gnome',
+      'flatpak',
+      'kerneloops',
+      'ModemManager',
+      'NetworkManager',
+      'power-profiles',
+      'qemu',
+      'thermald',
+      'virtlogd',
+      'libvirt',
+      'wpa_supplicant',
+      'zram',
+      'unattended',
+      'apport',
+      'lm-sensors',
+    ];
+
     return output
       .split('\n')
       .filter((line) => line.includes('.service'))
       .map((line) => {
         const serviceName =
           line.trim().split(/\s+/)[0]?.replace('.service', '') ?? '';
-        return {
-          id: `systemd-${serviceName}`,
-          name: serviceName,
-          icon: '⚙',
-          category: 'unknown' as AppCategory,
-          port: null,
-          url: null,
-          status: 'running' as AppStatus,
-          source: 'systemd' as AppSource,
-        };
+        return serviceName;
       })
-      .filter((app) => app.name !== '');
+      .filter((name) => {
+        if (name === '') return false;
+        return !ignoredPrefixes.some((prefix) =>
+          name.toLowerCase().startsWith(prefix.toLowerCase()),
+        );
+      })
+      .map((name) => ({
+        id: `systemd-${name}`,
+        name,
+        icon: '⚙',
+        category: 'unknown' as AppCategory,
+        port: null,
+        url: null,
+        status: 'running' as AppStatus,
+        source: 'systemd' as AppSource,
+      }));
   }
 
   private mergeApps(...appLists: DiscoveredApp[][]): DiscoveredApp[] {
